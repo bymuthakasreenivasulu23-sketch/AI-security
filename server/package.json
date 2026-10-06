@@ -5,13 +5,15 @@
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "prebuild": "npm run build --workspace=@trustlens/shared",
     "build": "tsc",
     "start": "node dist/index.js",
+    "db:migrate": "node dist/db/migrate.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.3.0",
-    "@trustlens/shared": "file:../shared",
+    "@trustlens/shared": "*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

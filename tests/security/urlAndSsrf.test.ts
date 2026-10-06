@@ -1,4 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('node:dns/promises', () => ({
+  default: {
+    lookup: vi.fn().mockImplementation(async (host: string) => {
+      if (host === 'example.com' || host === 'example.org') {
+        return { address: '93.184.216.34', family: 4 };
+      }
+      if (host === 'dns-rebind-attack.com') {
+        return { address: '10.0.0.1', family: 4 };
+      }
+      const err: any = new Error(`getaddrinfo ENOTFOUND ${host}`);
+      err.code = 'ENOTFOUND';
+      throw err;
+    }),
+  },
+}));
+
 import { validateUrlForSsrf, isPrivateIp } from '../../server/src/utils/urlValidator.js';
 import { safeFetchHtml, extractSignalsFromHtml } from '../../server/src/utils/htmlFetcher.js';
 import { analyzeSignalsRuleBased } from '../../server/src/ai/fallbackAnalyzer.js';
@@ -77,6 +94,10 @@ describe('URL Analysis & SSRF Security Defenses', () => {
 
     const privateRes = await validateUrlForSsrf('http://192.168.1.100/admin');
     expect(privateRes.isValid).toBe(false);
+
+    const rebindRes = await validateUrlForSsrf('http://dns-rebind-attack.com/admin');
+    expect(rebindRes.isValid).toBe(false);
+    expect(rebindRes.error).toMatch(/prohibited private IP/i);
   });
 
   // 8. Redirect handling & max redirect limit

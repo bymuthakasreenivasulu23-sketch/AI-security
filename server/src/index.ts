@@ -29,17 +29,48 @@ app.use(
 // CORS configuration
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5000')
   .split(',')
-  .map((origin) => origin.trim());
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow browser extensions (chrome-extension://) and localhost development
-      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://')) {
-        callback(null, true);
-      } else {
-        callback(null, true); // Dev-friendly fallback
+      // Allow requests with no origin (mobile apps, server-to-server, curl)
+      if (!origin) {
+        return callback(null, true);
       }
+
+      const normalizedOrigin = origin.replace(/\/$/, '');
+
+      // Check explicit allowed origins list
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      // Allow Chrome extensions
+      if (origin.startsWith('chrome-extension://')) {
+        return callback(null, true);
+      }
+
+      // Allow Vercel production and preview domains (*.vercel.app)
+      if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow local development ports
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        (/^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin))
+      ) {
+        return callback(null, true);
+      }
+
+      // Block unauthorized origins in production
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error(`Origin ${origin} is not allowed by CORS policy.`));
+      }
+
+      return callback(null, true);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

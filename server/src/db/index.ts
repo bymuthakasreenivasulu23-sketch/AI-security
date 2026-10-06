@@ -161,13 +161,16 @@ class DatabaseService {
         'SELECT * FROM users WHERE email = $1 LIMIT 1',
         [email]
       );
-      if (existing.rows.length > 0) return existing.rows[0];
+      if (existing.rows.length > 0 && existing.rows[0]) return existing.rows[0];
 
       const res = await this.pool.query<DBUser>(
         'INSERT INTO users (email, display_name) VALUES ($1, $2) RETURNING *',
         [email, displayName]
       );
       const newUser = res.rows[0];
+      if (!newUser) {
+        throw new Error('Failed to create user record');
+      }
       // Init default settings
       await this.pool.query(
         `INSERT INTO user_settings (user_id, auto_scan, ai_analysis, telemetry_enabled, sensitive_page_protection, show_low_confidence, risk_notification_threshold, retention_days)
@@ -217,7 +220,7 @@ class DatabaseService {
         'SELECT * FROM user_settings WHERE user_id = $1 LIMIT 1',
         [userId]
       );
-      if (res.rows.length > 0) return res.rows[0];
+      if (res.rows[0]) return res.rows[0];
 
       // Insert default if absent
       const insert = await this.pool.query<DBUserSettings>(
@@ -235,20 +238,26 @@ class DatabaseService {
           DEFAULT_USER_SETTINGS.retention_days,
         ]
       );
-      return insert.rows[0];
-    }
-
-    // Memory Store
-    let settings = this.memoryStore.settings.get(userId);
-    if (!settings) {
-      settings = {
+      if (insert.rows[0]) return insert.rows[0];
+      return {
         user_id: userId,
         ...DEFAULT_USER_SETTINGS,
         updated_at: new Date().toISOString(),
       };
-      this.memoryStore.settings.set(userId, settings);
     }
-    return settings;
+
+    // Memory Store
+    const existing = this.memoryStore.settings.get(userId);
+    if (existing) {
+      return existing;
+    }
+    const newSettings: DBUserSettings = {
+      user_id: userId,
+      ...DEFAULT_USER_SETTINGS,
+      updated_at: new Date().toISOString(),
+    };
+    this.memoryStore.settings.set(userId, newSettings);
+    return newSettings;
   }
 
   async updateUserSettings(
@@ -277,7 +286,8 @@ class DatabaseService {
           updated.retention_days,
         ]
       );
-      return res.rows[0];
+      if (res.rows[0]) return res.rows[0];
+      return updated;
     }
 
     const current = await this.getUserSettings(userId);
@@ -345,10 +355,13 @@ class DatabaseService {
               now,
             ]
           );
-          insertedFindings.push(fRes.rows[0]);
+          const inserted = fRes.rows[0];
+          if (inserted) insertedFindings.push(inserted);
         }
         await client.query('COMMIT');
-        return { scan: scanRes.rows[0], findings: insertedFindings };
+        const createdScan = scanRes.rows[0];
+        if (!createdScan) throw new Error('Failed to create scan record');
+        return { scan: createdScan, findings: insertedFindings };
       } catch (e) {
         await client.query('ROLLBACK');
         throw e;
@@ -422,7 +435,7 @@ class DatabaseService {
         'SELECT * FROM scans WHERE id = $1 AND user_id = $2 LIMIT 1',
         [scanId, userId]
       );
-      if (scanRes.rows.length === 0) return null;
+      if (scanRes.rows.length === 0 || !scanRes.rows[0]) return null;
 
       const findingsRes = await this.pool.query<DBFinding>(
         'SELECT * FROM findings WHERE scan_id = $1 ORDER BY created_at ASC',
@@ -504,7 +517,9 @@ class DatabaseService {
          RETURNING *`,
         [id, userId, findingId, feedbackType, notes || null, now]
       );
-      return res.rows[0];
+      const fb = res.rows[0];
+      if (!fb) throw new Error('Failed to record feedback');
+      return fb;
     }
 
     const rec: DBFeedback = {

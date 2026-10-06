@@ -18,14 +18,16 @@
     "dev:extension": "npm run dev -w extension",
     "build": "npm run build -w shared && npm run build -w server && npm run build -w client && npm run build -w extension",
     "build:shared": "npm run build -w shared",
-    "build:server": "npm run build -w server",
-    "build:client": "npm run build -w client",
+    "build:server": "npm run build -w shared && npm run build -w server",
+    "build:client": "npm run build -w shared && npm run build -w client",
+    "start": "npm run start -w server",
+    "start:server": "npm run start -w server",
     "extension:build": "npm run build -w extension",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w server && npm run typecheck -w client && npm run typecheck -w extension",
     "lint": "eslint . --ext .ts,.tsx --max-warnings 0 || echo \"Lint check completed\"",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "db:migrate": "node --loader ts-node/esm server/src/db/migrate.ts"
+    "db:migrate": "node server/dist/db/migrate.js"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",

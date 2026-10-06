@@ -7,7 +7,8 @@ import {
   SettingsUpdate,
 } from '@trustlens/shared';
 
-const API_BASE = '/api';
+const envApiUrl = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '').trim();
+const API_BASE = envApiUrl ? `${envApiUrl.replace(/\/$/, '')}/api` : '/api';
 
 export async function apiRequest<T>(
   endpoint: string,

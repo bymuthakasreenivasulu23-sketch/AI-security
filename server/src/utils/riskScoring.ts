@@ -51,18 +51,21 @@ export function calculateDeterministicRiskScore(findings: Finding[]): RiskScoreB
   }
 
   let totalWeightedPoints = 0;
-  const severityCount = { critical: 0, high: 0, medium: 0, low: 0 };
+  const severityCount: Record<SeverityLevel, number> = { critical: 0, high: 0, medium: 0, low: 0 };
   let manipulationCategoryCount = 0;
   let privacyCategoryCount = 0;
   let cumulativeConfidence = 0;
   const reasons: string[] = [];
 
   for (const finding of findings) {
-    const severity = (finding.severity || 'low') as SeverityLevel;
+    const severity: SeverityLevel =
+      finding.severity && ['critical', 'high', 'medium', 'low'].includes(finding.severity)
+        ? (finding.severity as SeverityLevel)
+        : 'low';
     const basePoints = SEVERITY_BASE_POINTS[severity] || 5;
     const confidence = Math.max(0.1, Math.min(1.0, finding.confidence || 0.7));
 
-    severityCount[severity] = (severityCount[severity] || 0) + 1;
+    severityCount[severity] = severityCount[severity] + 1;
     cumulativeConfidence += confidence;
 
     // Weight points by confidence

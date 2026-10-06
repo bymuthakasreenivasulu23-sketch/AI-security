@@ -4,12 +4,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
+    "prebuild": "npm run build --workspace=@trustlens/shared",
     "build": "vite build && npm run copy:manifest",
     "copy:manifest": "node -e \"const fs=require('fs'); fs.copyFileSync('manifest.json', 'dist/manifest.json');\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trustlens/shared": "file:../shared",
+    "@trustlens/shared": "*",
     "clsx": "^2.1.1",
     "lucide-react": "^0.475.0",
     "react": "^19.0.0",
