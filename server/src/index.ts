@@ -86,7 +86,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use('/api', apiRouter);
 
 // Root fallback
-app.get('/', (_req, res) => {
+app.get('/', (_req: Request, res: Response) => {
   res.status(200).json({
     name: 'TrustLens AI API Server',
     status: 'online',
@@ -96,7 +96,7 @@ app.get('/', (_req, res) => {
 });
 
 // 404 Handler
-app.use((_req, res) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     error: 'Resource not found',

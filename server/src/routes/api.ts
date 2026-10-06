@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import {
   analyzePage,
   getScans,
@@ -28,7 +28,7 @@ import { db } from '../db/index.js';
 export const apiRouter = Router();
 
 // Health Check
-apiRouter.get('/health', async (_req, res) => {
+apiRouter.get('/health', async (_req: Request, res: Response) => {
   await db.init();
   res.status(200).json({
     status: 'healthy',
@@ -45,7 +45,7 @@ apiRouter.get('/health', async (_req, res) => {
 });
 
 // Auth inspection
-apiRouter.get('/auth/me', authenticateUser, (req, res) => {
+apiRouter.get('/auth/me', authenticateUser, (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     user: req.user,
