@@ -36,10 +36,20 @@ export function neutralizePromptInjection(text: string): string {
   return sanitized;
 }
 
+function disarmXssAndHtml(text: string): string {
+  return text
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '[DISARMED_SCRIPT]')
+    .replace(/<script\b[^>]*>/gi, '[DISARMED_SCRIPT]')
+    .replace(/<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*(["'][^"']*["']|[^\s>]+)/gi, '[DISARMED_HANDLER]')
+    .replace(/javascript:\s*/gi, '[DISARMED_SCHEME]');
+}
+
 export function sanitizeSignalText(text: string, maxLength = 1000): string {
   if (!text) return '';
   const scrubbed = scrubSensitiveData(text);
-  const neutralized = neutralizePromptInjection(scrubbed);
+  const disarmed = disarmXssAndHtml(scrubbed);
+  const neutralized = neutralizePromptInjection(disarmed);
   return neutralized.trim().slice(0, maxLength);
 }
 

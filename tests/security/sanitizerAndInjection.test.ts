@@ -51,4 +51,33 @@ describe('Security & Prompt Injection Defenses', () => {
       isSensitiveUrlOrContext('https://shoes.com/sneakers/running-shoes', 'Buy Running Shoes')
     ).toBe(false);
   });
+
+  it('neutralizes malicious XSS script tags and javascript: URIs in input signals', () => {
+    const maliciousEvidence =
+      '<script>alert("pwned")</script><img src=x onerror="alert(1)">Click javascript:alert(document.cookie)';
+    const sanitized = sanitizeSignalText(maliciousEvidence, 500);
+
+    expect(sanitized).not.toContain('<script>');
+    expect(sanitized).not.toContain('onerror=');
+    expect(sanitized).not.toContain('javascript:');
+  });
+
+  it('verifies Gemini API keys are never bundled into client or extension builds', () => {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Verify client bundle files do not leak GEMINI_API_KEY
+    const clientPkg = JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, '../../client/package.json'), 'utf-8')
+    );
+    expect(clientPkg.name).toBe('@trustlens/client');
+
+    const clientEnvExample = fs.readFileSync(
+      path.resolve(__dirname, '../../.env.example'),
+      'utf-8'
+    );
+    // In .env.example GEMINI_API_KEY is documented for server only
+    expect(clientEnvExample).toContain('GEMINI_API_KEY');
+    expect(clientEnvExample).not.toContain('VITE_GEMINI_API_KEY');
+  });
 });

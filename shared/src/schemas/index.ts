@@ -78,11 +78,15 @@ export const FindingSchema = z.object({
 });
 export type Finding = z.infer<typeof FindingSchema>;
 
+export const AnalysisModeSchema = z.enum(['ai', 'rule_based']);
+export type AnalysisMode = z.infer<typeof AnalysisModeSchema>;
+
 export const AIAnalysisSchema = z.object({
   overallRiskScore: z.number().int().min(0).max(100),
   riskLevel: RiskLevelSchema,
   summary: z.string().min(1).max(3000),
   findings: z.array(FindingSchema).default([]),
+  analysisMode: AnalysisModeSchema.default('rule_based'),
 });
 export type AIAnalysis = z.infer<typeof AIAnalysisSchema>;
 
@@ -185,6 +189,7 @@ export const ScanResponseSchema = z.object({
   riskScore: z.number(),
   riskLevel: RiskLevelSchema,
   findingCount: z.number(),
+  analysisMode: AnalysisModeSchema.default('rule_based'),
   createdAt: z.string().datetime(),
   findings: z.array(
     FindingSchema.extend({

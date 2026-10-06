@@ -138,5 +138,64 @@ describe('Database User Isolation & Heuristic Analysis', () => {
     expect(categories).toContain('preselected_consent');
     expect(categories).toContain('hidden_fees');
     expect(categories).toContain('confirmshaming');
+    expect(analysis.analysisMode).toBe('rule_based');
+  });
+
+  it('evaluates completely clean page signals with 0 findings and low risk score', () => {
+    const cleanSignals: PageSignals = {
+      domain: 'clean-portal.org',
+      pageUrl: 'https://clean-portal.org/articles',
+      pageTitle: 'Articles Library',
+      pageType: 'informational',
+      interactiveElements: [],
+      pricingSignals: [],
+      consentSignals: [],
+      urgencySignals: [],
+      headings: ['Articles'],
+      privacySnippets: [],
+      isLikelySensitive: false,
+    };
+
+    const analysis = analyzeSignalsRuleBased(cleanSignals);
+    expect(analysis.findings.length).toBe(0);
+    expect(analysis.overallRiskScore).toBe(0);
+    expect(analysis.riskLevel).toBe('low');
+    expect(analysis.analysisMode).toBe('rule_based');
+  });
+
+  it('detects INR ₹ hidden fees and subscription recurring traps accurately', () => {
+    const signals: PageSignals = {
+      domain: 'shop-india.local',
+      pageUrl: 'https://shop-india.local/checkout',
+      pageTitle: 'Order Review',
+      pricingSignals: [
+        {
+          type: 'fee',
+          label: 'Service Convenience Handling Charge',
+          amount: '₹199',
+          selector: '.inr-fee',
+        },
+        {
+          type: 'trial',
+          label: 'Free 7-day trial vip access',
+          amount: '₹0',
+          isRecurring: true,
+          context: 'Auto-renews at ₹999/month',
+          selector: '.vip-trial',
+        },
+      ],
+      interactiveElements: [],
+      consentSignals: [],
+      urgencySignals: [],
+      headings: [],
+      privacySnippets: [],
+      isLikelySensitive: false,
+    };
+
+    const analysis = analyzeSignalsRuleBased(signals);
+    const categories = analysis.findings.map((f) => f.category);
+    expect(categories).toContain('hidden_fees');
+    expect(categories).toContain('subscription_traps');
+    expect(analysis.overallRiskScore).toBeGreaterThan(40);
   });
 });

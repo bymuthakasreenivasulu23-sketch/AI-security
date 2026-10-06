@@ -215,6 +215,7 @@ Perform your analysis and return the required JSON format.
       riskLevel: scoreBreakdown.level,
       summary,
       findings: validatedFindings,
+      analysisMode: 'ai',
     };
   } catch (err: any) {
     console.error('[Gemini AI] Error invoking Gemini model:', err.message);

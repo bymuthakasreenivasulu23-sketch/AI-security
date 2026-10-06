@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS scans (
     risk_score INTEGER NOT NULL CHECK (risk_score BETWEEN 0 AND 100),
     risk_level VARCHAR(20) NOT NULL CHECK (risk_level IN ('low', 'mild', 'moderate', 'high', 'critical')),
     finding_count INTEGER NOT NULL DEFAULT 0 CHECK (finding_count >= 0),
+    analysis_mode VARCHAR(20) NOT NULL DEFAULT 'rule_based' CHECK (analysis_mode IN ('ai', 'rule_based')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

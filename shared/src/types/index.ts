@@ -51,6 +51,7 @@ export interface ScanRecord {
   riskScore: number;
   riskLevel: RiskLevel;
   findingCount: number;
+  analysisMode?: 'ai' | 'rule_based';
   createdAt: string;
 }
 

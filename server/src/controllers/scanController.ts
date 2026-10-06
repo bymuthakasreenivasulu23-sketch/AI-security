@@ -73,6 +73,7 @@ export async function analyzePage(req: Request, res: Response) {
         risk_score: analysis.overallRiskScore,
         risk_level: analysis.riskLevel,
         finding_count: findingsToSave.length,
+        analysis_mode: analysis.analysisMode,
       },
       findingsToSave.map((f) => ({
         category: f.category,
@@ -98,6 +99,7 @@ export async function analyzePage(req: Request, res: Response) {
         riskScore: saved.scan.risk_score,
         riskLevel: saved.scan.risk_level,
         findingCount: saved.scan.finding_count,
+        analysisMode: saved.scan.analysis_mode || analysis.analysisMode,
         summary: analysis.summary,
         findings: saved.findings.map((f) => ({
           id: f.id,
@@ -146,6 +148,7 @@ export async function getScans(req: Request, res: Response) {
           riskScore: s.risk_score,
           riskLevel: s.risk_level,
           findingCount: s.finding_count,
+          analysisMode: s.analysis_mode || 'rule_based',
           createdAt: s.created_at,
         })),
         pagination: {
@@ -190,6 +193,7 @@ export async function getScanById(req: Request, res: Response) {
         riskScore: result.scan.risk_score,
         riskLevel: result.scan.risk_level,
         findingCount: result.scan.finding_count,
+        analysisMode: result.scan.analysis_mode || 'rule_based',
         createdAt: result.scan.created_at,
         findings: result.findings.map((f) => ({
           id: f.id,

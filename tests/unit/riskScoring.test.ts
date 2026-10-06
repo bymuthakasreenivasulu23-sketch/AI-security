@@ -63,4 +63,23 @@ describe('Deterministic Risk Scoring Engine', () => {
     expect(res1.score).toBe(res2.score);
     expect(res1.level).toBe(res2.level);
   });
+
+  it('should cap overall score at 100 even with many stacked critical findings', () => {
+    const manyCriticalFindings: Finding[] = Array.from({ length: 10 }).map((_, i) => ({
+      category: 'subscription_traps',
+      title: `Critical issue ${i}`,
+      severity: 'critical',
+      confidence: 0.99,
+      evidence: `Evidence ${i}`,
+      explanation: `Explanation ${i}`,
+      potentialImpact: `Impact ${i}`,
+      recommendation: `Recommendation ${i}`,
+      sourceElement: `.selector-${i}`,
+    }));
+
+    const result = calculateDeterministicRiskScore(manyCriticalFindings);
+    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.score).toBe(100);
+    expect(result.level).toBe('critical');
+  });
 });

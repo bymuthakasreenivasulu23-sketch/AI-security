@@ -77,4 +77,44 @@ describe('Zod Validation Schemas', () => {
     const result = AnalyzeRequestSchema.safeParse(validReq);
     expect(result.success).toBe(true);
   });
+
+  it('validates analysisMode with AnalysisModeSchema and inside AIAnalysisSchema', () => {
+    const { AnalysisModeSchema } = require('@trustlens/shared');
+    expect(AnalysisModeSchema.safeParse('ai').success).toBe(true);
+    expect(AnalysisModeSchema.safeParse('rule_based').success).toBe(true);
+    expect(AnalysisModeSchema.safeParse('unknown').success).toBe(false);
+
+    const validAiResult = AIAnalysisSchema.safeParse({
+      overallRiskScore: 40,
+      riskLevel: 'moderate',
+      summary: 'Moderate findings detected.',
+      findings: [],
+      analysisMode: 'ai',
+    });
+    expect(validAiResult.success).toBe(true);
+  });
+
+  it('validates PageSignals with multi-currency pricing symbols (₹, $, €, £, ¥)', () => {
+    const signals = {
+      domain: 'international-shop.local',
+      pageUrl: 'https://international-shop.local/cart',
+      pageTitle: 'Global Cart',
+      pricingSignals: [
+        { type: 'price', label: 'INR Price', amount: '₹199' },
+        { type: 'price', label: 'USD Price', amount: '$49.99' },
+        { type: 'price', label: 'EUR Price', amount: '€39.50' },
+        { type: 'price', label: 'GBP Price', amount: '£29.00' },
+        { type: 'price', label: 'JPY Price', amount: '¥3,500' },
+      ],
+      interactiveElements: [],
+      consentSignals: [],
+      urgencySignals: [],
+      headings: [],
+      privacySnippets: [],
+      isLikelySensitive: false,
+    };
+
+    const parsed = PageSignalsSchema.safeParse(signals);
+    expect(parsed.success).toBe(true);
+  });
 });

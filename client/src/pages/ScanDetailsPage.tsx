@@ -121,7 +121,18 @@ export const ScanDetailsPage: React.FC = () => {
             </a>
           </div>
 
-          <RiskBadge score={scan.riskScore} level={scan.riskLevel} size="lg" />
+          <div className="flex items-center space-x-2">
+            {scan.analysisMode && (
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                scan.analysisMode === 'ai'
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : 'bg-blue-50 text-blue-700 border-blue-200'
+              }`}>
+                {scan.analysisMode === 'ai' ? 'AI Analysis' : 'Rule-Based Analysis'}
+              </span>
+            )}
+            <RiskBadge score={scan.riskScore} level={scan.riskLevel} size="lg" />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">

@@ -270,7 +270,18 @@ export const ScanPage: React.FC = () => {
                     <span className="text-xs font-mono text-slate-400">{scanResult.domain}</span>
                     <h2 className="text-xl font-extrabold text-slate-900">{scanResult.pageTitle}</h2>
                   </div>
-                  <RiskBadge score={scanResult.riskScore} level={scanResult.riskLevel} size="lg" />
+                  <div className="flex items-center space-x-2">
+                    {scanResult.analysisMode && (
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                        scanResult.analysisMode === 'ai'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        {scanResult.analysisMode === 'ai' ? 'AI Analysis' : 'Rule-Based Analysis'}
+                      </span>
+                    )}
+                    <RiskBadge score={scanResult.riskScore} level={scanResult.riskLevel} size="lg" />
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs text-slate-700 leading-relaxed">

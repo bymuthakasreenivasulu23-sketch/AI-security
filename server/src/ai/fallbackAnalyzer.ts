@@ -100,11 +100,16 @@ export function analyzeSignalsRuleBased(signals: PageSignals): AIAnalysis {
   for (const price of signals.pricingSignals || []) {
     const labelLower = price.label.toLowerCase();
     if (
+      price.type === 'fee' ||
+      price.type === 'hidden_fee' ||
       labelLower.includes('service fee') ||
       labelLower.includes('processing fee') ||
       labelLower.includes('handling fee') ||
       labelLower.includes('convenience fee') ||
-      labelLower.includes('hidden fee')
+      labelLower.includes('hidden fee') ||
+      labelLower.includes('handling charge') ||
+      labelLower.includes('convenience charge') ||
+      labelLower.includes('surcharge')
     ) {
       findings.push({
         category: 'hidden_fees',
@@ -192,6 +197,7 @@ export function analyzeSignalsRuleBased(signals: PageSignals): AIAnalysis {
     riskLevel: scoreBreakdown.level,
     summary,
     findings,
+    analysisMode: 'rule_based',
   };
 }
 
@@ -259,20 +265,24 @@ export function analyzePrivacyPolicyRuleBased(text: string): PrivacyAnalysis {
     concerns.push('Data retention timeline is open-ended or vaguely specified');
   }
 
+  const notSpecified = 'Not specified in the provided policy.';
+
   return {
     summary:
-      'This privacy policy outlines data handling practices, detailing collection of device and contact info, usage for analytics and marketing, and sharing with third-party service providers.',
-    dataCollected: dataCollected.length > 0 ? dataCollected : ['General interaction data'],
-    purposes: purposes.length > 0 ? purposes : ['Service delivery and maintenance'],
-    sharing: sharing.length > 0 ? sharing : ['Third-party infrastructure providers'],
-    trackingIndicators: trackingIndicators.length > 0 ? trackingIndicators : ['Standard session cookies'],
-    profilingIndicators: profilingIndicators.length > 0 ? profilingIndicators : ['None explicitly identified'],
-    retention: lower.includes('retention')
+      'This privacy policy outlines data handling practices based on the provided text disclosures.',
+    dataCollected: dataCollected.length > 0 ? dataCollected : [notSpecified],
+    purposes: purposes.length > 0 ? purposes : [notSpecified],
+    sharing: sharing.length > 0 ? sharing : [notSpecified],
+    trackingIndicators: trackingIndicators.length > 0 ? trackingIndicators : [notSpecified],
+    profilingIndicators: profilingIndicators.length > 0 ? profilingIndicators : [notSpecified],
+    retention: lower.includes('retention') || lower.includes('retain')
       ? 'Retained for duration of active relationship plus statutory obligation periods'
-      : 'Retained as needed for operational and legal compliance purposes',
-    userControls: userControls.length > 0 ? userControls : ['Account deletion or contact support'],
-    sensitiveDataIndicators: lower.includes('biometric') || lower.includes('health') ? ['Sensitive personal data may be collected'] : [],
-    concerns: concerns.length > 0 ? concerns : ['Verify third-party advertising partner policies'],
-    uncertainties: ['Exact duration of third-party cookie persistence may depend on specific ad networks.'],
+      : notSpecified,
+    userControls: userControls.length > 0 ? userControls : [notSpecified],
+    sensitiveDataIndicators: lower.includes('biometric') || lower.includes('health')
+      ? ['Sensitive personal data may be collected']
+      : [notSpecified],
+    concerns: concerns.length > 0 ? concerns : ['No explicit high-risk commercial transfer clauses detected.'],
+    uncertainties: ['Third-party affiliate processing terms may vary depending on jurisdiction.'],
   };
 }

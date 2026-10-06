@@ -26,6 +26,7 @@ interface ScanData {
   findings: Finding[];
   isSensitivePage?: boolean;
   message?: string;
+  analysisMode?: 'ai' | 'rule_based';
 }
 
 const LOADING_STEPS = [
@@ -337,7 +338,14 @@ export const Popup: React.FC = () => {
             {/* Visual Risk Indicator Card */}
             <div className={`p-4 rounded-xl border shadow-sm flex items-center justify-between ${getRiskColor(scanData.riskLevel)}`}>
               <div className="space-y-0.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider opacity-80">Overall Risk Level</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider opacity-80">Overall Risk</span>
+                  {scanData.analysisMode && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-white/80 border border-black/10">
+                      {scanData.analysisMode === 'ai' ? 'AI Analysis' : 'Rule-Based Analysis'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-baseline space-x-2">
                   <span className="text-2xl font-black">{scanData.riskScore}</span>
                   <span className="text-xs font-bold">/ 100</span>

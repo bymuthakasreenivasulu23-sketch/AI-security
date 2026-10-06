@@ -7,7 +7,6 @@ import {
   SENSITIVE_PATTERNS,
 } from '@trustlens/shared';
 
-// Helper to determine if an element is visible in the viewport or render tree
 function isElementVisible(el: HTMLElement): boolean {
   if (!el) return false;
   const style = window.getComputedStyle(el);
@@ -23,7 +22,6 @@ function isElementVisible(el: HTMLElement): boolean {
   return rect.width > 0 && rect.height > 0;
 }
 
-// Generate a simple CSS selector path for source identification
 function getElementSelector(el: Element): string {
   if (el.id) return `#${el.id}`;
   let selector = el.tagName.toLowerCase();
@@ -38,17 +36,14 @@ export function isPageLikelySensitive(): boolean {
   const url = window.location.href.toLowerCase();
   const title = document.title.toLowerCase();
 
-  // Check URL keywords
   for (const keyword of SENSITIVE_PATTERNS.URL_KEYWORDS) {
     if (url.includes(keyword)) return true;
   }
 
-  // Check Title keywords
   for (const t of SENSITIVE_PATTERNS.PAGE_TITLES) {
     if (title.includes(t)) return true;
   }
 
-  // Check if page has password inputs
   const passwordInputs = document.querySelectorAll('input[type="password"]');
   if (passwordInputs.length > 0) return true;
 
@@ -58,27 +53,24 @@ export function isPageLikelySensitive(): boolean {
 export function extractPageSignals(): PageSignals {
   const isSensitive = isPageLikelySensitive();
 
-  // 1. Interactive Elements (Buttons, Links, Checkboxes, Radios)
+  // 1. Interactive Elements
   const interactiveElements: InteractiveElement[] = [];
   const interactiveNodes = document.querySelectorAll(
     'button, a[role="button"], input[type="checkbox"], input[type="radio"], select, [role="button"]'
   );
 
   interactiveNodes.forEach((node, idx) => {
-    if (idx >= 60) return; // Limit total elements
+    if (idx >= 60) return;
     const el = node as HTMLElement;
     if (!isElementVisible(el)) return;
 
-    // NEVER inspect passwords, hidden tokens, or private form values
     let text = '';
     if (el.tagName === 'INPUT') {
       const inputEl = el as HTMLInputElement;
       if (inputEl.type === 'password' || inputEl.type === 'hidden') return;
-      // For button/submit inputs, value is the button label (e.g. "Submit")
       if (inputEl.type === 'submit' || inputEl.type === 'button') {
         text = (inputEl.value || '').trim();
       } else {
-        // For text/email/number, ONLY read placeholder, NEVER the entered value!
         text = (inputEl.placeholder || '').trim();
       }
     } else {
@@ -89,7 +81,6 @@ export function extractPageSignals(): PageSignals {
     const ariaLabel = el.getAttribute('aria-label') || el.getAttribute('title') || null;
     const isChecked = (el as HTMLInputElement).checked ?? null;
 
-    // Extract nearby text for context (e.g. checkbox label)
     let nearbyText: string | null = null;
     if (el.parentElement) {
       nearbyText = (el.parentElement.innerText || '').trim().slice(0, 150);
@@ -207,7 +198,6 @@ export function extractPageSignals(): PageSignals {
       lower.includes('auto-renew') ||
       lower.includes('subscription')
     ) {
-      // Support multi-currency symbols: $, €, £, ₹, ¥, Rs.
       const amountMatch = text.match(/(?:[\$€£₹¥]|rs\.?)\s*[\d,.]+|\b[\d,.]+\s*(?:usd|eur|gbp|inr)\b/i);
       pricingSignals.push({
         type: 'pricing_item',
@@ -231,7 +221,6 @@ export function extractPageSignals(): PageSignals {
   textNodes.forEach((node) => {
     if (urgencySignals.length >= 10) return;
     const el = node as HTMLElement;
-    // Only check leaf or near-leaf elements to prevent duplication
     if (el.children.length > 2 || !isElementVisible(el)) return;
 
     const text = (el.innerText || '').trim();
@@ -243,6 +232,7 @@ export function extractPageSignals(): PageSignals {
       lower.includes('expires in') ||
       lower.includes('limited time') ||
       lower.includes('only left') ||
+      lower.includes('only ') && lower.includes('remaining') ||
       lower.includes('hurry') ||
       lower.includes('act now') ||
       lower.includes('demand is high') ||
@@ -255,7 +245,7 @@ export function extractPageSignals(): PageSignals {
         text: text.slice(0, 150),
         hasTimer: timerMatch !== null,
         timerValue: timerMatch ? timerMatch[0] : null,
-        scarcityClaim: lower.includes('left') || lower.includes('demand') ? text : null,
+        scarcityClaim: lower.includes('left') || lower.includes('demand') || lower.includes('remaining') ? text : null,
         selector: getElementSelector(el),
       });
     }

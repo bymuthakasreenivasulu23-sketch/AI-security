@@ -34,6 +34,7 @@ export interface DBScan {
   risk_score: number;
   risk_level: RiskLevel;
   finding_count: number;
+  analysis_mode?: 'ai' | 'rule_based';
   created_at: string;
 }
 
@@ -302,9 +303,10 @@ class DatabaseService {
       const client = await this.pool.connect();
       try {
         await client.query('BEGIN');
+        const mode = scan.analysis_mode || 'rule_based';
         const scanRes = await client.query<DBScan>(
-          `INSERT INTO scans (id, user_id, domain, page_url, page_title, page_type, risk_score, risk_level, finding_count, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `INSERT INTO scans (id, user_id, domain, page_url, page_title, page_type, risk_score, risk_level, finding_count, analysis_mode, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            RETURNING *`,
           [
             scanId,
@@ -316,6 +318,7 @@ class DatabaseService {
             scan.risk_score,
             scan.risk_level,
             findings.length,
+            mode,
             now,
           ]
         );
