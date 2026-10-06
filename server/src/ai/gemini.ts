@@ -1,4 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: '../.env' });
 import {
   AIAnalysis,
   AIAnalysisSchema,
@@ -146,32 +149,31 @@ Perform your analysis and return the required JSON format.
   try {
     let responseText = '';
 
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    // Primary: Google GenAI interaction
-    if ((client as any).interactions?.create) {
-      const interaction = await (client as any).interactions.create({
-        model,
-        input: userPrompt,
-        system_instruction: SYSTEM_INSTRUCTION_DARK_PATTERNS,
-        response_format: [
-          {
-            type: 'text',
-            mime_type: 'application/json',
-          },
-        ],
-      });
-      responseText = interaction.output_text || '';
-    } else if ((client as any).models?.generateContent) {
-      // Compatibility fallback
-      const resp = await (client as any).models.generateContent({
-        model,
-        contents: userPrompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION_DARK_PATTERNS,
-          responseMimeType: 'application/json',
-        },
-      });
-      responseText = resp.text || '';
+    const candidateModels = [
+      process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+      'gemini-flash-latest',
+      'gemini-2.5-pro',
+    ];
+
+    for (const model of candidateModels) {
+      try {
+        if ((client as any).models?.generateContent) {
+          const resp = await (client as any).models.generateContent({
+            model,
+            contents: userPrompt,
+            config: {
+              systemInstruction: SYSTEM_INSTRUCTION_DARK_PATTERNS,
+              responseMimeType: 'application/json',
+            },
+          });
+          if (resp.text && resp.text.trim().length > 0) {
+            responseText = resp.text;
+            break;
+          }
+        }
+      } catch (modelErr: any) {
+        console.warn(`[Gemini AI] Model ${model} error (${modelErr.message}). Attempting fallback candidate...`);
+      }
     }
 
     if (!responseText) {
@@ -240,30 +242,31 @@ ${sanitizedText}
 
   try {
     let responseText = '';
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    if ((client as any).interactions?.create) {
-      const interaction = await (client as any).interactions.create({
-        model,
-        input: userPrompt,
-        system_instruction: SYSTEM_INSTRUCTION_PRIVACY_POLICY,
-        response_format: [
-          {
-            type: 'text',
-            mime_type: 'application/json',
-          },
-        ],
-      });
-      responseText = interaction.output_text || '';
-    } else if ((client as any).models?.generateContent) {
-      const resp = await (client as any).models.generateContent({
-        model,
-        contents: userPrompt,
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION_PRIVACY_POLICY,
-          responseMimeType: 'application/json',
-        },
-      });
-      responseText = resp.text || '';
+    const candidateModels = [
+      process.env.GEMINI_MODEL || 'gemini-3-flash-preview',
+      'gemini-flash-latest',
+      'gemini-2.5-pro',
+    ];
+
+    for (const model of candidateModels) {
+      try {
+        if ((client as any).models?.generateContent) {
+          const resp = await (client as any).models.generateContent({
+            model,
+            contents: userPrompt,
+            config: {
+              systemInstruction: SYSTEM_INSTRUCTION_PRIVACY_POLICY,
+              responseMimeType: 'application/json',
+            },
+          });
+          if (resp.text && resp.text.trim().length > 0) {
+            responseText = resp.text;
+            break;
+          }
+        }
+      } catch (modelErr: any) {
+        console.warn(`[Gemini AI] Privacy analysis model ${model} error (${modelErr.message}). Trying fallback candidate...`);
+      }
     }
 
     const cleaned = responseText.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();

@@ -198,4 +198,100 @@ describe('Database User Isolation & Heuristic Analysis', () => {
     expect(categories).toContain('subscription_traps');
     expect(analysis.overallRiskScore).toBeGreaterThan(40);
   });
+
+  it('analyzePage controller strictly blocks private SSRF target URLs with 400 status', async () => {
+    const { analyzePage } = await import('../../server/src/controllers/scanController.js');
+    const user = await db.getOrCreateUser('tester@trustlens.local', 'Tester');
+
+    let responseStatus = 0;
+    let responseBody: any = null;
+
+    const mockReq: any = {
+      user,
+      body: {
+        pageUrl: 'http://127.0.0.1:8080/admin',
+        pageTitle: 'Internal Admin',
+      },
+    };
+
+    const mockRes: any = {
+      status(code: number) {
+        responseStatus = code;
+        return this;
+      },
+      json(data: any) {
+        responseBody = data;
+        return this;
+      },
+    };
+
+    await analyzePage(mockReq, mockRes);
+    expect(responseStatus).toBe(400);
+    expect(responseBody.success).toBe(false);
+    expect(responseBody.error).toMatch(/SSRF|localhost|private/i);
+  });
+
+  it('analyzePage controller handles Branch A provided signals and persists scan with findings', async () => {
+    const { analyzePage } = await import('../../server/src/controllers/scanController.js');
+    const user = await db.getOrCreateUser('brancha@trustlens.local', 'Branch A User');
+
+    let responseStatus = 0;
+    let responseBody: any = null;
+
+    const mockReq: any = {
+      user,
+      body: {
+        domain: 'store.branch-a.local',
+        pageUrl: 'https://store.branch-a.local/cart',
+        pageTitle: 'Branch A Cart',
+        signals: {
+          domain: 'store.branch-a.local',
+          pageUrl: 'https://store.branch-a.local/cart',
+          pageTitle: 'Branch A Cart',
+          interactiveElements: [
+            {
+              type: 'button',
+              text: 'No thanks, I hate saving money',
+              visible: true,
+            },
+          ],
+          pricingSignals: [],
+          consentSignals: [],
+          urgencySignals: [],
+          headings: [],
+          privacySnippets: [],
+          isLikelySensitive: false,
+        },
+      },
+    };
+
+    const mockRes: any = {
+      status(code: number) {
+        responseStatus = code;
+        return this;
+      },
+      json(data: any) {
+        responseBody = data;
+        return this;
+      },
+    };
+
+    const origKey = process.env.GEMINI_API_KEY;
+    try {
+      delete process.env.GEMINI_API_KEY; // Run controller test deterministically
+      await analyzePage(mockReq, mockRes);
+      expect(responseStatus).toBe(200);
+      expect(responseBody.success).toBe(true);
+      expect(responseBody.data.scanId).toBeDefined();
+      expect(responseBody.data.findings.length).toBeGreaterThan(0);
+      expect(responseBody.data.findings[0].category).toBe('confirmshaming');
+
+      // Verify it was actually saved in the DB
+      const saved = await db.getScanById(user.id, responseBody.data.scanId);
+      expect(saved).not.toBeNull();
+      expect(saved?.scan.id).toBe(responseBody.data.scanId);
+    } finally {
+      if (origKey) process.env.GEMINI_API_KEY = origKey;
+    }
+  });
 });

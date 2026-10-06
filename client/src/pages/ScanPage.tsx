@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Search,
   FileText,
@@ -10,6 +11,8 @@ import {
   ShieldCheck,
   Eye,
   Lock,
+  Globe,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../services/api.js';
 import { FindingCard } from '../components/FindingCard.js';
@@ -28,8 +31,8 @@ export const ScanPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'url' | 'privacy'>('url');
 
   // URL Scan state
-  const [url, setUrl] = useState('https://store.demo-shop.local/checkout');
-  const [pageTitle, setPageTitle] = useState('Demo Store Checkout');
+  const [url, setUrl] = useState('https://example.com');
+  const [pageTitle, setPageTitle] = useState('Example Domain');
   const [loading, setLoading] = useState(false);
   const [loadingStepIdx, setLoadingStepIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -63,71 +66,22 @@ export const ScanPage: React.FC = () => {
         domain: parsedUrl.hostname,
         pageUrl: url,
         pageTitle: pageTitle || parsedUrl.hostname,
-        pageType: 'ecommerce_checkout',
-        // Mock signals for direct manual scans
-        signals: {
-          domain: parsedUrl.hostname,
-          pageUrl: url,
-          pageTitle: pageTitle || parsedUrl.hostname,
-          pageType: 'ecommerce_checkout',
-          interactiveElements: [
-            {
-              type: 'button',
-              text: 'No, I prefer paying full price',
-              visible: true,
-              selector: 'button.decline-offer',
-            },
-          ],
-          pricingSignals: [
-            {
-              type: 'hidden_fee',
-              label: 'Mandatory Service Processing Fee',
-              amount: '$4.99',
-              context: 'Revealed at final step',
-              selector: '.fee-item',
-            },
-            {
-              type: 'trial',
-              label: 'Start 7-Day Free Trial',
-              amount: '$0.00',
-              context: 'Auto-renews at $79/yr after 7 days',
-              isRecurring: true,
-              selector: '.trial-notice',
-            },
-          ],
-          consentSignals: [
-            {
-              type: 'marketing_precheck',
-              label: 'I agree to receive personalized marketing offers from 40+ partners',
-              checkedByDefault: true,
-              purpose: 'marketing',
-              selector: '#opt_in_partners',
-            },
-          ],
-          urgencySignals: [
-            {
-              type: 'countdown_timer',
-              text: 'Offer expires in 00:29!',
-              hasTimer: true,
-              timerValue: '00:29',
-              scarcityClaim: 'Only 2 items left at this price!',
-              selector: '.timer-wrap',
-            },
-          ],
-          headings: ['Secure Checkout', 'Review Order'],
-          privacySnippets: [],
-          isLikelySensitive: false,
-          extractedAt: new Date().toISOString(),
-        },
+        pageType: 'webpage_static_analysis',
+        // Do NOT send mock signals! The backend safely fetches and extracts signals from the target URL.
       });
 
       if (res.isSensitivePage) {
-        setError(res.message || 'Sensitive page detected.');
+        setError(res.message || 'Sensitive page detected. Automatic analysis is paused for your privacy.');
       } else if (res.success && res.data) {
         setScanResult(res.data);
+      } else {
+        setError('Analysis returned no data.');
       }
     } catch (err: any) {
-      setError(err.message || 'Page analysis failed.');
+      setError(
+        err.message ||
+        'Unable to retrieve this webpage. If the site requires JavaScript to render or blocks automated requests, open the page in Chrome and use the TrustLens Chrome Extension for live DOM analysis.'
+      );
     } finally {
       clearInterval(interval);
       setLoading(false);
@@ -197,6 +151,29 @@ export const ScanPage: React.FC = () => {
       {/* Tab 1: Webpage URL Scan */}
       {activeTab === 'url' && (
         <div className="space-y-6">
+          {/* Architecture Honesty Banner */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/80 rounded-2xl p-4 text-xs text-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-start space-x-3">
+              <Globe className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-slate-900">
+                  Remote Webpage Analyzer (Server-Side Static Analysis)
+                </p>
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Fetches public HTML through secure SSRF-guarded filters. For client-rendered SPAs, live countdown tickers, or cookie banners, use the{' '}
+                  <span className="font-semibold text-blue-700">TrustLens Chrome Extension</span> or explore our interactive{' '}
+                  <Link to="/demo" className="underline font-semibold hover:text-blue-900">Demo Lab</Link>.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/demo"
+              className="text-xs font-bold text-blue-700 hover:text-blue-900 bg-white px-3 py-1.5 rounded-lg border border-blue-200 whitespace-nowrap shadow-2xs transition"
+            >
+              Open Demo Lab &rarr;
+            </Link>
+          </div>
+
           <form
             onSubmit={handleUrlScan}
             className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4"
@@ -288,6 +265,18 @@ export const ScanPage: React.FC = () => {
                   <span className="font-bold block text-slate-900 mb-1">AI & Heuristics Summary</span>
                   {scanResult.summary}
                 </div>
+
+                {scanResult.scanId && (
+                  <div className="flex justify-end pt-1">
+                    <Link
+                      to={`/scan/${scanResult.scanId}`}
+                      className="inline-flex items-center space-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50/80 hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-200 transition"
+                    >
+                      <span>Open Full Scan Details</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Findings List */}

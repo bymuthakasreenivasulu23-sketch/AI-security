@@ -91,7 +91,7 @@ export const AIAnalysisSchema = z.object({
 export type AIAnalysis = z.infer<typeof AIAnalysisSchema>;
 
 export const AnalyzeRequestSchema = z.object({
-  domain: z.string().min(1).max(255),
+  domain: z.string().max(255).optional(),
   pageUrl: z.string().url().max(2048),
   pageTitle: z.string().max(500).default('Untitled Page'),
   pageType: z.string().max(100).default('general'),

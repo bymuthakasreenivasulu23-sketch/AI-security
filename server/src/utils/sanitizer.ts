@@ -11,7 +11,7 @@ const API_KEY_REGEX = /\b(?:AIza[0-9A-Za-z-_]{35}|ghp_[0-9a-zA-Z]{36}|sk-[a-zA-Z
 
 // Prompt injection keywords to neutralize
 const PROMPT_INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?(previous|prior)\s+instructions/gi,
+  /ignore\s+(all\s+)?(previous|prior)\s+(instructions|rules|directives|constraints)/gi,
   /reveal\s+(the\s+)?system\s+prompt/gi,
   /you\s+are\s+now\s+in\s+developer\s+mode/gi,
   /system\s*:\s*override/gi,

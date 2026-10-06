@@ -9,6 +9,8 @@ import {
   PageSignalsSchema,
 } from '@trustlens/shared';
 import { isSensitiveUrlOrContext } from '../utils/sanitizer.js';
+import { validateUrlForSsrf } from '../utils/urlValidator.js';
+import { safeFetchHtml, extractSignalsFromHtml } from '../utils/htmlFetcher.js';
 
 export async function analyzePage(req: Request, res: Response) {
   try {
@@ -17,12 +19,49 @@ export async function analyzePage(req: Request, res: Response) {
 
     const userSettings = await db.getUserSettings(userId);
 
-    const pageTitle = body.pageTitle || 'Untitled Page';
+    let signals: PageSignals;
+    let targetDomain = body.domain;
+    let pageTitle = body.pageTitle || 'Untitled Page';
     const pageType = body.pageType || 'general';
+
+    // Branch A: Explicit Signals Provided (from Chrome Extension live DOM or Demo Lab)
+    if (body.signals) {
+      signals = PageSignalsSchema.parse(body.signals);
+      targetDomain = targetDomain || signals.domain || new URL(body.pageUrl).hostname;
+      pageTitle = signals.pageTitle || pageTitle;
+    } else {
+      // Branch B: URL Analyzer Workflow (fetch remote webpage safely with SSRF protection)
+      const ssrfValidation = await validateUrlForSsrf(body.pageUrl);
+      if (!ssrfValidation.isValid) {
+        return res.status(400).json({
+          success: false,
+          error: ssrfValidation.error || 'Invalid or prohibited URL.',
+          recommendation:
+            'Only public HTTP and HTTPS URLs can be analyzed. Private networks, cloud metadata, and loopback addresses are blocked for security.',
+        });
+      }
+
+      targetDomain = targetDomain || ssrfValidation.domain || new URL(body.pageUrl).hostname;
+
+      // Safe remote HTML fetch
+      const fetchResult = await safeFetchHtml(body.pageUrl);
+      if (!fetchResult.success || !fetchResult.html) {
+        return res.status(422).json({
+          success: false,
+          error: fetchResult.error || 'Failed to retrieve webpage HTML content.',
+          recommendation:
+            'Unable to retrieve this webpage statically. Many modern websites require client-side JavaScript to render their checkout elements. Try opening the page in Chrome and using the TrustLens Chrome Extension for live DOM analysis.',
+        });
+      }
+
+      // Extract structured signals safely from fetched HTML
+      signals = extractSignalsFromHtml(fetchResult.html, fetchResult.finalUrl || body.pageUrl);
+      pageTitle = signals.pageTitle || pageTitle;
+    }
 
     // Check sensitive page protection
     const isSensitive =
-      body.signals?.isLikelySensitive ||
+      signals.isLikelySensitive ||
       isSensitiveUrlOrContext(body.pageUrl, pageTitle);
 
     if (isSensitive && userSettings.sensitive_page_protection && !body.forceAnalysis) {
@@ -34,24 +73,6 @@ export async function analyzePage(req: Request, res: Response) {
           'This appears to be a financial, authentication, government, or healthcare page. You can analyze manually if needed.',
       });
     }
-
-    // Parse and apply defaults to signals
-    const signals: PageSignals = PageSignalsSchema.parse(
-      body.signals || {
-        domain: body.domain,
-        pageUrl: body.pageUrl,
-        pageTitle,
-        pageType,
-        interactiveElements: [],
-        pricingSignals: [],
-        consentSignals: [],
-        urgencySignals: [],
-        headings: [],
-        privacySnippets: [],
-        isLikelySensitive: isSensitive,
-        extractedAt: new Date().toISOString(),
-      }
-    );
 
     // Analyze using Gemini (or fallback rule-based analyzer)
     const analysis = await analyzeSignalsWithGemini(signals);
@@ -66,7 +87,7 @@ export async function analyzePage(req: Request, res: Response) {
     const saved = await db.createScan(
       {
         user_id: userId,
-        domain: body.domain,
+        domain: targetDomain || new URL(body.pageUrl).hostname,
         page_url: body.pageUrl,
         page_title: pageTitle,
         page_type: pageType,
