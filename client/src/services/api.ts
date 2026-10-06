@@ -89,4 +89,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  // Health & System Info
+  getHealth: () =>
+    apiRequest<{
+      status: string;
+      service: string;
+      storageMode: 'postgresql' | 'memory';
+      aiConfigured: boolean;
+    }>('/health'),
 };

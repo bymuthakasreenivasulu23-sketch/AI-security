@@ -23,16 +23,24 @@ import {
   SettingsUpdateSchema,
 } from '@trustlens/shared';
 import { z } from 'zod';
+import { db } from '../db/index.js';
 
 export const apiRouter = Router();
 
 // Health Check
-apiRouter.get('/health', (_req, res) => {
+apiRouter.get('/health', async (_req, res) => {
+  await db.init();
   res.status(200).json({
     status: 'healthy',
     service: 'trustlens-ai-server',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
+    storageMode: db.usingPostgres ? 'postgresql' : 'memory',
+    aiConfigured: Boolean(
+      process.env.GEMINI_API_KEY &&
+      process.env.GEMINI_API_KEY.trim().length > 0 &&
+      !process.env.GEMINI_API_KEY.includes('your_gemini_api_key')
+    ),
   });
 });
 

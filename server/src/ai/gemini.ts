@@ -146,10 +146,11 @@ Perform your analysis and return the required JSON format.
   try {
     let responseText = '';
 
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     // Primary: Google GenAI interaction
     if ((client as any).interactions?.create) {
       const interaction = await (client as any).interactions.create({
-        model: 'gemini-3.8-flash',
+        model,
         input: userPrompt,
         system_instruction: SYSTEM_INSTRUCTION_DARK_PATTERNS,
         response_format: [
@@ -163,7 +164,7 @@ Perform your analysis and return the required JSON format.
     } else if ((client as any).models?.generateContent) {
       // Compatibility fallback
       const resp = await (client as any).models.generateContent({
-        model: 'gemini-3.8-flash',
+        model,
         contents: userPrompt,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION_DARK_PATTERNS,
@@ -239,9 +240,10 @@ ${sanitizedText}
 
   try {
     let responseText = '';
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
     if ((client as any).interactions?.create) {
       const interaction = await (client as any).interactions.create({
-        model: 'gemini-3.8-flash',
+        model,
         input: userPrompt,
         system_instruction: SYSTEM_INSTRUCTION_PRIVACY_POLICY,
         response_format: [
@@ -254,7 +256,7 @@ ${sanitizedText}
       responseText = interaction.output_text || '';
     } else if ((client as any).models?.generateContent) {
       const resp = await (client as any).models.generateContent({
-        model: 'gemini-3.8-flash',
+        model,
         contents: userPrompt,
         config: {
           systemInstruction: SYSTEM_INSTRUCTION_PRIVACY_POLICY,

@@ -73,6 +73,13 @@ export const Navbar: React.FC = () => {
             >
               Privacy Policy
             </Link>
+
+            <Link
+              to="/about"
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 transition"
+            >
+              About
+            </Link>
           </div>
 
           {/* Mobile menu button */}

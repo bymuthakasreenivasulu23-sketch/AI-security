@@ -17,6 +17,10 @@ export const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [systemHealth, setSystemHealth] = useState<{
+    storageMode?: 'postgresql' | 'memory';
+    aiConfigured?: boolean;
+  }>({});
 
   useEffect(() => {
     loadSettings();
@@ -25,9 +29,18 @@ export const SettingsPage: React.FC = () => {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const res = await api.getSettings();
+      const [res, health] = await Promise.all([
+        api.getSettings(),
+        api.getHealth().catch(() => null),
+      ]);
       if (res.success && res.data) {
         setSettings(res.data);
+      }
+      if (health) {
+        setSystemHealth({
+          storageMode: health.storageMode,
+          aiConfigured: health.aiConfigured,
+        });
       }
     } catch (e: any) {
       setError(e.message || 'Failed to load user settings.');
@@ -225,6 +238,50 @@ export const SettingsPage: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1">
               Automatically purge metadata for scans older than this timeframe.
             </p>
+          </div>
+        </section>
+
+        {/* System & Storage Environment Status */}
+        <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+          <div className="flex items-center space-x-2 border-b pb-3">
+            <Lock className="w-4 h-4 text-emerald-600" />
+            <h2 className="text-sm font-bold text-slate-900">System & Storage Environment</h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+              <span className="font-bold text-slate-700 block">Database Storage Status</span>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${systemHealth.storageMode === 'postgresql' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                <span className="font-semibold text-slate-900 capitalize">
+                  {systemHealth.storageMode === 'postgresql'
+                    ? 'Persistent PostgreSQL Database'
+                    : 'Resilient In-Memory Session'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {systemHealth.storageMode === 'postgresql'
+                  ? 'History and telemetry persist securely across server restarts with relational integrity.'
+                  : 'PostgreSQL is not currently connected. Scans persist during the active server session.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+              <span className="font-bold text-slate-700 block">AI Reasoning Engine</span>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${systemHealth.aiConfigured ? 'bg-purple-500' : 'bg-blue-500'}`} />
+                <span className="font-semibold text-slate-900">
+                  {systemHealth.aiConfigured
+                    ? 'Google Gemini API Active'
+                    : 'Local Heuristics Engine Active'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {systemHealth.aiConfigured
+                  ? 'Cloud LLM reasoning is enabled for deep qualitative dark pattern analysis.'
+                  : 'Autonomous offline rule engine is active. Full pattern detection functions without external keys.'}
+              </p>
+            </div>
           </div>
         </section>
 
